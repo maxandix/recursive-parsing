@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
-from urllib.request import Request, urlopen
+from urllib.request import Request, urlopen, build_opener, install_opener
 from urllib.parse import urlparse
 
 FORBIDDEN_PREFIXES = ['#', 'tel:', 'mailto:']
+opener = None
 
 
 def get_html(url):
@@ -12,6 +13,12 @@ def get_html(url):
 
 
 def find_all_links_recursive(url, depth=1):
+    global opener
+    if opener is None:
+        opener = build_opener()
+        opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
+        install_opener(opener)
+
     print("It's links from: " + url)
     print()
 
@@ -35,8 +42,9 @@ def find_all_links_recursive(url, depth=1):
         print(link)
         links.append(link)
 
+    print("========== end of links from: " + url)
+    print()
+
     if depth > 0:
         for link in links:
             find_all_links_recursive(link, depth=depth - 1)
-    print("========== end of links from: " + url)
-    print()
