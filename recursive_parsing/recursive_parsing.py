@@ -1,24 +1,32 @@
 from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen, build_opener, install_opener
 from urllib.parse import urlparse
+import configparser
+import validators
+import logging
 
-FORBIDDEN_PREFIXES = ['#', 'tel:', 'mailto:']
-opener = None
+def get_forbidden_prefixes():
+    config = configparser.ConfigParser()
+    config.read('config.cfg')
+    prefixes = config.get('Settings', 'FORBIDDEN_PREFIXES')
+    return list(map(lambda x: x.strip(), prefixes.split(',')))
+
+
+FORBIDDEN_PREFIXES = get_forbidden_prefixes()
 
 
 def get_html(url):
     req = Request(url)
-    html = urlopen(req).read()
-    return html
+    return urlopen(req).read()
 
 
 def find_all_links_recursive(url, depth=1):
-    global opener
-    if opener is None:
-        opener = build_opener()
-        opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
-        install_opener(opener)
+    opener = build_opener()
+    opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
+    install_opener(opener)
+    _parse_url(url, depth=depth)
 
+def _parse_url(url, depth=1):
     print("It's links from: " + url)
     print()
 
@@ -30,6 +38,7 @@ def find_all_links_recursive(url, depth=1):
 
     tags = soup.find_all('a')
     for a in tags:
+
         if not a.get('href'):
             continue
 
@@ -39,12 +48,14 @@ def find_all_links_recursive(url, depth=1):
 
         if link.startswith('/') and not link.startswith('//'):
             link = f'{parse_result.scheme}://{parse_result.netloc}{link}'
-        print(link)
-        links.append(link)
+
+        if validators.url(link):
+            print(link)
+            links.append(link)
 
     print("========== end of links from: " + url)
     print()
 
     if depth > 0:
         for link in links:
-            find_all_links_recursive(link, depth=depth - 1)
+            _parse_url(link, depth=depth - 1)
