@@ -1,9 +1,11 @@
 from bs4 import BeautifulSoup
 from urllib.request import Request, urlopen, build_opener, install_opener
 from urllib.parse import urlparse
+from urllib.error import URLError
 import configparser
 import validators
 import logging
+
 
 def get_forbidden_prefixes():
     config = configparser.ConfigParser()
@@ -13,6 +15,7 @@ def get_forbidden_prefixes():
 
 
 FORBIDDEN_PREFIXES = get_forbidden_prefixes()
+logger = logging.getLogger(__name__)
 
 
 def get_html(url):
@@ -26,6 +29,7 @@ def find_all_links_recursive(url, depth=1):
     install_opener(opener)
     _parse_url(url, depth=depth)
 
+
 def _parse_url(url, depth=1):
     print("It's links from: " + url)
     print()
@@ -33,7 +37,12 @@ def _parse_url(url, depth=1):
     links = []
     parse_result = urlparse(url)
 
-    html = get_html(url)
+    try:
+        html = get_html(url)
+    except URLError:
+        logger.exception(f'Ошибка открытия ссылки: url = {url}', exc_info=False)
+        return
+
     soup = BeautifulSoup(html, 'html.parser')
 
     tags = soup.find_all('a')
